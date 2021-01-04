@@ -1,1 +1,7 @@
 This is project related to data extraction from DDC112(TI) Current to digital converter via Opal Kelly FPGA board 
+The verilog code consists of:
+  - pipeout_test1.v - main file
+    - FSM.v
+      - CLKGEN.v
+      - READOUT.v
+    - DDC112_mock.v - for emulating the DDC112 behavior(needs to be uncommented in main file)
