@@ -23,6 +23,10 @@ module READOUT(
 	input wire RST,
 	input wire DVALID_BAR,
 	input wire DOUT,
+//	input wire  [10:0] fifo_cnt,
+	input wire  [9:0] fifo_cnt,
+	input wire  [31:0] TINT,
+	
 	output reg DXMIT_BAR,
 	
 	output wire fifo_flag,
@@ -30,18 +34,17 @@ module READOUT(
 	input fiforead,
 	
 	output reg state,
-	output reg done
+	output reg done,
+	output [31:0] fifo_th
     );
 	 
 	 parameter bitnum=40; 
-	 parameter fifo_flagnum = 64;
+//	 parameter fifo_flagnum = 64;
+	 reg [31:0] fifo_th;
 	 
 	 reg [8:0] bitcnt;
 	 reg [bitnum-1:0] doutreg;
 	 
-	 reg  [7:0] fifo_cnt;
-	 reg fifo_read_done;
-	 reg fifo_read_old;
 	 reg dxmit_bar_old;
 	 
 	 
@@ -49,7 +52,18 @@ module READOUT(
 	 parameter IDLE=0, RETRIEVE=1;
 	 
 	 //shine LED when DATA needs to be retrieved 
-	 assign fifo_flag= (fifo_cnt>63)? 1:0;
+	 // Given that we want to readout each ~200msec, we need to adjust FIFO flag when changing integration time 
+	 wire tintless1msec;
+	 wire tintless5msec;
+	 wire tintless10msec;
+	 wire tintless05msec;
+	 
+	 assign tintless05msec = ((TINT<5000))? 1:0;
+	 assign tintless1msec = ((TINT<10000)&&(TINT>5000-1))? 1:0;
+	 assign tintless5msec = ((TINT<50000)&&(TINT>10000-1))? 1:0;
+	 assign tintless10msec = ((TINT<100000)&&(TINT>50000-1))? 1:0;
+	 
+	 assign fifo_flag= (fifo_cnt>(2*fifo_th))? 1:0;
 	 
 	 always @(posedge SYS_CLK or posedge RST)
 	 begin
@@ -62,39 +76,40 @@ module READOUT(
 			done 				<=0;
 			data2pipe 		<=0;
 			DXMIT_BAR 		<=1;
-			
-			fifo_read_done <=0;
-			fifo_cnt 		<=0;
-			fifo_read_old	<=0;
+			fifo_th			<=100;
 		end
 		else
 		begin
-			// to set flag for fifo 
-			fifo_read_old	<=fiforead;
-			if (done==1)
+			if (tintless05msec)
 			begin
-				if (fifo_read_done==1)
+				fifo_th <= 400;
+			end
+			else
+			begin
+				if (tintless1msec)
 				begin
-					fifo_cnt <= fifo_cnt-fifo_flagnum;
-					fifo_read_done <=0;
+					fifo_th <= 200;
 				end
 				else
 				begin
-					if (fifo_cnt<127)
+					if (tintless5msec)
 					begin
-						fifo_cnt <= fifo_cnt+1;
+						fifo_th <= 50;
 					end
 					else
 					begin
-						fifo_cnt <= 127;
-					end
-					//if (fiforead<=1)
-					if (fiforead==1)
-					begin
-							fifo_read_done<=1;
+						if (tintless10msec)
+						begin
+							fifo_th <= 25;
+						end
+						else
+						begin
+							fifo_th <= 20;
+						end
 					end
 				end
 			end
+			
 			
 			dvalid_bar_old	<=DVALID_BAR;
 			case (state)
