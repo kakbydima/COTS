@@ -9,8 +9,8 @@
 // Project Name: 
 // Target Devices: 
 // Tool versions: 
-// Description: FSM to control to extract data and set different timing 
-//
+// Description: 
+
 // Dependencies: 
 //
 // Revision: 
@@ -23,25 +23,27 @@ module FSM(
         input wire sys_clkp,			// for clock generation 100MHz
 		  input wire okClk,
 		  
-		  input wire DOUT, 				//for DDC112 interface
-		  input wire DVALID_BAR, 		//for DDC112 interface
-		  output wire DXMIT_BAR, 		//for DDC112 interface
-		  output wire SYS_CLK, 			//for DDC112 interface
-		  output wire DCLK, 				//for DDC112 interface
-		  output wire CONV, 				//for DDC112 interface
+		  input wire DOUT, 				//for chip interface
+		  input wire DVALID_BAR, 		//for chip interface
+		  output wire DXMIT_BAR, 		//for chip interface
+		  output wire SYS_CLK, 			//for chip interface
+		  output wire DCLK, 				//for chip interface
+		  output wire CONV, 				//for chip interface
 		  
 		  input wire reset_fsm, 		// from wirein 
 		  output wire fifo_flag, 		// to either trigger or wireout
 		  input wire fiforead,			// for pipeout
-		  output wire [31:0] dataout  // for pipeout
-		 // input 
+		  output wire [31:0] dataout,  // for pipeout
+		  input [31:0] TINT, // integration time(in 10MHz clocks)gets connected to wireouts
+		  output [31:0] fifo_th 
     );
  
 	 // My code is here 
-	 wire [31:0] TINT; // integration time(in 10MHz clocks)gets connected to wireouts
 	 // TINT TEMP
-	 assign TINT = 10000;
+//	 assign TINT = 10000;
 	 
+	 wire [9:0] fifo_cnt;
+//	 wire [10:0] fifo_cnt;
 	 // Clock
     wire clk;
     wire done;
@@ -78,20 +80,27 @@ module FSM(
 			.fiforead(fiforead),
 			
 			.state(state),
-			.done(done)
+			.done(done),
+			.fifo_cnt(fifo_cnt),
+			.fifo_th(fifo_th),
+			.TINT(TINT)
     );
 	     
 	// Xilinx Core IP Generated FIFO	
-	FIFO_I64_O32 fifo(
+	fifo_64I_32O_1024 fifo(
      .din(data2pipe),
      .dout(dataout),
      .wr_en(done),
      .rd_en(fiforead),
-     //.clk(ti_clk), not sure if the clock should be the same as system clock 
      .wr_clk(SYS_CLK),
      .rd_clk(okClk),
-     .rst(reset_fsm)
+     .rst(reset_fsm),
+	  .full(),
+	  .empty(),
+	  .valid(),
+	  .rd_data_count(fifo_cnt),
+	  .wr_data_count()
+
 	);
-	
 
 endmodule
