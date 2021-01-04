@@ -85,5 +85,6 @@ module CLKGEN(
 			end
 		end
 	 end
+//asd
 assign 	 DCLK = (dxmit_bar_del==0)? SYS_CLK:0;
 endmodule
